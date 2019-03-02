@@ -19,6 +19,99 @@
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
  * #L%
  */
+const bulletDirections = (bullets, bulletsOnMap, board)=>{
+  bulletsOnMap = bulletsOnMap.reduce((ar,x) => {
+    if(x.direction){
+      let X = x.x, Y = x.y;
+      switch(x.direction){
+        case 'UP':
+          Y += 2;
+          break;
+        case 'DOWN':
+          Y -= 2;
+          break;
+        case 'RIGHT':
+          X+=2;
+          break;
+        case 'LEFT':
+          X-=2;
+      }
+      if(board.getAt(X,Y) === Elements.BULLET)
+        ar.push(x);
+    }
+    else
+    if (has(bullets,new Point(x.x, x.y + 2))) {
+      x.direction = "UP";
+      ar.push(x);
+    } else
+    if (has(bullets,new Point(x.x, x.y - 2))) {
+      x.direction = "DOWN";
+      ar.push(x);
+    } else
+    if (has(bullets,new Point(x.x + 2, x.y))) {
+      x.direction = "RIGHT";
+      ar.push(x);
+    } else
+    if (has(bullets,new Point(x.x - 2, x.y))) {
+      x.direction = "LEFT";
+      ar.push(x);
+    }
+    return ar;
+  }, []);
+  bulletsOnMap.forEach(x=>x.update());
+  bullets.filter(x=>!has(bulletsOnMap,x)).forEach(b=>bulletsOnMap.push(BulletFactory.create(b.x,b.y)));
+  return bulletsOnMap;
+}
+const dangerCells = (bulletsArray, board) => {
+  const tank = board.getMe();
+  const bulletsFly = bulletsArray.reduce((ar, x) => {
+    let x1 = x.x, x2 = x.x, y1 = x.y, y2 = x.y;
+    let bulletUndef = false;
+    switch (x.direction) {
+      case 'UP':
+        y1++;
+        y2 += 2;
+        break;
+      case 'DOWN':
+        y1--;
+        y2 -= 2;
+        break;
+      case 'RIGHT':
+        x1++;
+        x2 += 2;
+        break;
+      case 'LEFT':
+        x1--;
+        x2 -= 2;
+        break;
+      default:
+        bulletUndef = true;
+    }
+    if (!bulletUndef) {
+      ar.push({ x: x1, y: y1 });
+      ar.push({ x: x2, y: y2 });
+    }
+    return ar;
+  }, []);
+  let dangerMap = new Array(board.size())
+    .fill([])
+    .map(()=>new Array(board.size()))
+    .map(c=>c.fill(0));
+  bulletsFly && bulletsFly
+    .filter(x=>x.x >= 0 && x.x < board.size() && x.y >= 0 && x.y < board.size())
+    .forEach(x=>{
+      dangerMap[x.x][x.y] = Elements.BULLET;
+    });
+  board.getBarriers().forEach(x=>{
+    dangerMap[x.x][x.y] = Elements.BATTLE_WALL
+  });
+  board.getEnemies().forEach(x=>{
+    dangerMap[x.x][x.y] = Elements.TANK_DOWN;
+  });
+  return dangerMap;
+}
+
+
 const util = require('util');
 const WSocket = require('ws');
 
@@ -55,7 +148,7 @@ const processBoard = function (boardString) {
 };
 
 // you can get this code after registration on the server with your email
-let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/71hk8ayegb2ayigd3oix?code=9199167215377388441";
+let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/i7zskjkz5a93j272s0au?code=4803967771983834522";
 
 url = url.replace("http", "ws");
 url = url.replace("board/player/", "ws?user=");
@@ -242,12 +335,44 @@ class Point {
   }
 };
 
-class Bullet extends Point {
-  constructor(x, y) {
-    super(x, y);
-    this.direction = undefined;
+function bulletCreator(){
+  class Bullet extends Point {
+    constructor(x, y, id) {
+      super(x, y);
+      this.direction = undefined;
+      this.id = id;
+      this.initX = x;
+      this.initY = y;
+    }
+    toString(){
+      return this.x + " " + this.y + " " + this.direction;
+    }
+    update(){
+      switch(this.direction){
+        case 'UP':
+          this.y += 2;
+          break;
+        case 'DOWN':
+          this.y -= 2;
+          break;
+        case 'RIGHT':
+          this.x+=2;
+          break;
+        case 'LEFT':
+          this.x-=2;
+          break;
+        default:
+      }
+    }
   }
+  this.counter = 0;
+  this.createBullet = (x, y) => {
+    this.id++;
+    return new Bullet(x, y, this.id);
+  }
+  return {create: this.createBullet};
 }
+
 
 var pt = function (x, y) {
   return new Point(x, y);
@@ -494,37 +619,21 @@ var Board = function (board) {
 const random = function (n) {
   return Math.floor(Math.random() * n);
 };
-
+const has = (array, point)=>{
+  return array.some(x=>x.x == point.x && x.y == point.y);
+}
 let direction;
 let bulletsOnMap = [];
+let dangerMap = [];
 
+const BulletFactory = bulletCreator();
 const DirectionSolver = function (board) {
-
   return {
     get: function () {
       const tank = board.getMe();
-      const bullets = board.getBullets();
+      bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
 
-
-
-      bulletsOnMap.filter(x=>!x.direction).forEach(x => {
-        if (bullets.contains(Point(x.x, x.y + 2))) {
-          x.direction = "UP";
-        } else
-        if (bullets.contains(Point(x.x, x.y - 2))) {
-          x.direction = "DOWN";
-        } else
-        if (bullets.contains(Point(x.x + 2, x.y))) {
-          x.direction = "RIGHT";
-        } else
-        if (bullets.contains(Point(x.x - 2, x.y))) {
-          x.direction = "LEFT";
-        } else{
-          bulletsOnMap.remove(x);
-        }
-      })
-
-      bullets.forEach(b=>bulletsOnMap.add(Bullet(b.x,b.y)));
+      console.log(dangerCells(bulletsOnMap, board));
 
       return "LEFT,ACT";
     }
