@@ -88,6 +88,7 @@ const dangerCells = (bulletsArray, board) => {
         bulletUndef = true;
     }
     if (!bulletUndef) {
+      ar.push({x:x.x, y:x.y});
       ar.push({ x: x1, y: y1 });
       ar.push({ x: x2, y: y2 });
     }
@@ -400,6 +401,11 @@ const getSaveCells = function (x, y, dangerMap) {
       }
     }
   }
+  function compareRandom(a, b) {
+    return Math.random() - 0.5;
+  }
+
+  result.sort(compareRandom);
   return result;
 };
 var pt = function (x, y) {
@@ -653,6 +659,34 @@ var Board = function (board) {
     };
 };
 
+function getTanksTrajectories(danger, board) {
+  let tempDanger = new Array(danger.length).fill([]).map(x=>new Array(danger.length).fill(0));
+  board.getEnemies().forEach(tank => {
+    for (let x = tank.x+1; x < 43; x++) {
+      if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
+        tempDanger[x][tank.y]++;
+      } else break;
+    }
+    for (let x = tank.x-1; x >= 0 ; x--) {
+      if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
+        tempDanger[x][tank.y]++;
+      } else break;
+    }
+    for (let y = tank.y+1; y < 43 ; y++) {
+      if (danger[tank.x][y] !== Elements.BATTLE_WALL) {
+        tempDanger[tank.x][y]++;
+      } else break;
+    }
+    for (let y = tank.y-1; y >= 0 ; y--) {
+      if (danger[tank.x][y] !== Elements.BATTLE_WALL) {
+        tempDanger[tank.x][y]++;
+      } else break;
+    }
+  })
+  console.log(tempDanger);
+  return tempDanger;
+}
+
 const random = function (n) {
     return Math.floor(Math.random() * n);
 };
@@ -667,9 +701,14 @@ const BulletFactory = bulletCreator();
 const DirectionSolver = function (board) {
   return {
     get: function () {
+
       const tank = board.getMe();
+      if (!tank)
+        return "STOP"
       bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
       dangerMap = dangerCells(bulletsOnMap, board);
+      getTanksTrajectories(dangerMap, board);
+
       return getSaveCells(tank.x, tank.y, dangerMap) + ",ACT";
     }
   };
