@@ -57,6 +57,43 @@ const bulletDirections = (bullets, bulletsOnMap, board) => {
     bullets.filter(x => !has(bulletsOnMap, x)).forEach(b => bulletsOnMap.push(BulletFactory.create(b.x, b.y)));
     return bulletsOnMap;
 }
+
+function findDirection(p1, p2){
+  let x = p1.x -
+    p2.x;
+  let y = p1.y - p2.y;
+  let str = x + " " + y;
+  switch(str){
+    case '1 0':
+      str = 'LEFT';
+      break;
+    case '-1 0':
+      str = 'RIGHT';
+      break;
+    case '0 -1':
+      str = ('UP');
+      break;
+    case '0 1':
+      str = ('DOWN');
+      break;
+    case '0 0':
+      str = ('STOP');
+      break;
+  }
+  return str;
+}
+function findClosestTank(board) {
+  return board.getEnemies().map(x => ({
+    tank: x,
+    path: x.fastestPath(board.getMe(),
+      convertDengerBoardToMap(dangerMap, x))
+  })).sort((first, second) => {
+    if(first.path===null && second.path === null) return first;
+    if(first.path === null) return 10000 - second.path.length;
+    if(second.path === null) return  -10000 + first.path.length;
+    return first.path.length - second.path.length;
+  })[0];
+}
 const dangerCells = (bulletsArray, board) => {
   const tank = board.getMe();
   const bulletsFly = bulletsArray.reduce((ar, x) => {
@@ -86,7 +123,18 @@ const dangerCells = (bulletsArray, board) => {
       ar.push({x:x.x, y:x.y});
       ar.push({ x: x1, y: y1 });
       ar.push({ x: x2, y: y2 });
+    }else{
+      ar.push({x:x.x, y:x.y});
+      ar.push({ x: x+1, y: x.y });
+      ar.push({ x: x+2, y: x.y });
+      ar.push({ x: x-1, y: x.y });
+      ar.push({ x: x-2, y: x.y });
+      ar.push({ x: x, y: x.y -1});
+      ar.push({ x: x, y: x.y - 2});
+      ar.push({ x: x, y: x.y +1});
+      ar.push({ x: x, y: x.y +2});
     }
+
     return ar;
   }, []);
   let dangerMap = new Array(board.size())
@@ -98,7 +146,9 @@ const dangerCells = (bulletsArray, board) => {
     .forEach(x=>{
       dangerMap[x.x][x.y] = Elements.BULLET;
     });
-    return dangerMap;
+  board.getEnemies().forEach(e=>dangerMap[e.x][e.y] = Elements.TANK_DOWN);
+  board.getBarriers().forEach(e=>dangerMap[e.x][e.y] = Elements.BATTLE_WALL);
+  return dangerMap;
 }
 
 
@@ -341,69 +391,80 @@ class Point {
     }
 };
 
-function waveAlgorithm(map, pos, dest){
-    //init map where in every cell its path from pos
-    //if its unpassable cell value is -1
-    pos = new Point(pos.x,pos.y);
-    if(pos.distanceSq(dest) < 2)
-        return [dest];
-    let mapSheme = new Array(map.length)
-        .fill([])
-        .map(()=>new Array(map.length))
-        .map(c=>c.fill(0))
-        .map((row,x)=>row
-            .map((c,y)=>map[x][y] ? 0 : -1))
-    mapSheme[pos.y][pos.x] = 0;
-    mapSheme[dest.y][dest.x] = 0;
-    //wave its all cells whose neighbors need to be incremented
-    let wave = [pos];
-    //loop that increments all cells until we come to pos from dest
-    let counter = 0;
-    while(!mapSheme[dest.y][dest.x] && counter < 150){
-        wave = incrementNeighbors(mapSheme, map, wave, pos);
-        counter++;
-    }
-    if(counter == 500)
-        return;
-        //return waveAlgorithm(map, pos, dest);
-    let lastStep = dest;
-    let path = [];
-    console.log(mapSheme)
-    while(!lastStep.equal(pos)){
-        path.unshift(lastStep);
-        lastStep = decrementedCell(mapSheme, lastStep);
-        if(!lastStep)return path;
-    }
-    //path it is array of points
-    return path;
+function waveAlgorithm(Map, dest, pos){
+  //init map where in every cell its path from pos
+  //if its unpassable cell value is -1
+  const map = Map.map(row=>row.map(x=>x === 1 ? 0 : 1));
+  // 0 - if passable
+  console.log(pos + " position");
+  console.log(dest + " dest");
+  pos = new Point(pos.x,pos.y);
+  if(pos.distanceSq(dest) < 2)
+    return [dest];
+
+  let mapSheme = new Array(map.length)
+    .fill([])
+    .map(()=>new Array(map.length))
+    .map(c=>c.fill(0))
+    .map((row,x)=>row
+      .map((c,y)=>map[x][y] ? -1 : 0))
+  mapSheme[pos.x][pos.y] = 0;
+  mapSheme[dest.x][dest.y] = 0;
+  //wave its all cells whose neighbors need to be incremented
+  let wave = [pos];
+  //loop that increments all cells until we come to pos from dest
+  let counter = 0;
+  while(!mapSheme[dest.x][dest.y] && counter < 200){
+    wave = incrementNeighbors(mapSheme, map, wave, pos);
+    counter++;
+  }
+  //return waveAlgorithm(map, pos, dest);
+  let lastStep = dest;
+  let path = [];
+  console.log('from :' + pos + " " + mapSheme[pos.x][pos.y])
+  console.log('to: ' + dest + " " + mapSheme[dest.x][dest.y]);
+  console.log(path);
+  while(!lastStep.equal(pos)){
+    path.unshift(lastStep);
+    lastStep = decrementedCell(mapSheme, lastStep);
+     if(!lastStep)return null;
+  }
+  //path it is array of points
+  console.log(path);
+
+  return path;
 }
 
+
 function incrementNeighbors(mapSheme, map, wave, pos){
-    //icnrement all nearby to wave cells
-    let nextWave = [];
-    if(!wave || !wave.length)return;
-    let value = mapSheme[wave[0].y][wave[0].x] + 1;
-    wave.forEach(waveI=>{
-        getNearbyCells(
-            waveI, (x)=>
-                x.insideSquare(map.length)&& map[x.y][x.x]&& !mapSheme[x.y][x.x]&& !x.equal(pos)
-        ).forEach(n=>{
-            mapSheme[n.y][n.x] = value;
-            nextWave.push(n);
-        })
+  //icnrement all nearby to wave cells
+  let nextWave = [];
+  if(!wave || !wave.length)return;
+  let value = mapSheme[wave[0].x][wave[0].y] + 1;
+  wave.forEach(waveI=>{
+    getNearbyCells(
+      waveI, (x)=>
+        x.insideSquare(map.length) && !map[x.x][x.y] && !mapSheme[x.x][x.y] && !x.equal(pos)
+    ).forEach(n=>{
+      mapSheme[n.x][n.y] = value;
+      nextWave.push(n);
     })
-    return nextWave;
+  })
+  return nextWave;
 }
 function getNearbyCells(p,validCB){
-    //gets nearby cells
-    return [p.shift(-1,0), p.shift(1,0), p.shift(0, -1), p.shift(0,1)]
-        .filter(x=>validCB(x));
+  //gets nearby cells
+  return [p.shift(-1,0), p.shift(1,0), p.shift(0, -1), p.shift(0,1)]
+    .filter(x=>validCB(x));
 }
 function decrementedCell(mapSheme, lastStep) {
-    //finds cell that has n-1 value to find all path to pos
-    return getNearbyCells(lastStep, (x)=>x.insideSquare(mapSheme.length))
-        .find((cell)=>mapSheme[cell.y][cell.x] == mapSheme[lastStep.y][lastStep.x] - 1)
+  //finds cell that has n-1 value to find all path to pos
+
+  return getNearbyCells(lastStep, (x)=>x.insideSquare(mapSheme.length))
+    .find((cell)=>mapSheme[cell.x][cell.y] == mapSheme[lastStep.x][lastStep.y] - 1)
 }
+
+
 
 
 function bulletCreator() {
@@ -512,11 +573,12 @@ const LengthToXY = function (boardSize) {
     };
 };
 
-function convertDengerBoardToMap(dangerBoard) {
-    console.log(dangerBoard);
-    return dangerBoard.map(row => {
+function convertDengerBoardToMap(dangerBoard, x) {
+    let map = dangerBoard.map(row => {
         return row.map(cell => cell === 0 ? 1 : 0);
     });
+    map[x.x][x.y] = 1;
+    return map;
 }
 
 
@@ -741,38 +803,62 @@ var Board = function (board) {
 };
 
 function getTanksTrajectories(danger, board) {
-  let tempDanger = new Array(danger.length).fill([]).map(x=>new Array(danger.length).fill(0));
-  board.getEnemies().forEach(tank => {
-    for (let x = tank.x+1; x < 43; x++) {
-      if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
-        tempDanger[x][tank.y]++;
-      } else break;
-    }
-    for (let x = tank.x-1; x >= 0 ; x--) {
-      if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
-        tempDanger[x][tank.y]++;
-      } else break;
-    }
-    for (let y = tank.y+1; y < 43 ; y++) {
-      if (danger[tank.x][y] !== Elements.BATTLE_WALL) {
-        tempDanger[tank.x][y]++;
-      } else break;
-    }
-    for (let y = tank.y-1; y >= 0 ; y--) {
-      if (danger[tank.x][y] !== Elements.BATTLE_WALL) {
-        tempDanger[tank.x][y]++;
-      } else break;
-    }
-  })
-  console.log(tempDanger);
-  return tempDanger;
-}
+  let {tank,path} = findClosestTank(board);
+  let tempDanger = danger.map(row => [...row]);
+  for (let x = tank.x + 1; x < 43; x++) {
+    if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
+      tempDanger[x][tank.y]++;
+    } else break;
+  }
+  for (let x = tank.x - 1; x >= 0; x--) {
+    if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
+      tempDanger[x][tank.y]++;
+    } else break;
+  }
+  for (let y = tank.y + 1; y < 43; y++) {
+    if (danger[tank.x][y] !== Elements.BATTLE_WALL) {
+      tempDanger[tank.x][y]++;
+    } else break;
+  }
+  for (let y = tank.y - 1; y >= 0; y--) {
+    if (danger[tank.x][y] !== Elements.BATTLE_WALL) {
+      tempDanger[tank.x][y]++;
+    } else break;
+  }
+  let temp = tempDanger
+    .reduce((ar,row, x) => {
+      ar.push(...row.map((cell, y) => ({ coords: new Point(x, y), value: cell})))
+      return ar;
+    },[]).filter(o => typeof o.value == "number" && o.value > 0);
+  console.log(path);
+  console.log(tank);
+  let str = "";
+  if(temp.find(x=>x.coords.equal(board.getMe()))){
+    str = ",ACT";
+    console.log('I AM ON THE LINE WITH ENEMY')
+  }
+  let nextPoint;
+    nextPoint = path[0];
 
+  console.log(board.getMe(), nextPoint);
+  return findDirection(board.getMe(), nextPoint) + str;
+
+  // return temp;
+
+}
 const random = function (n) {
     return Math.floor(Math.random() * n);
 };
 const has = (array, point) => {
     return array.some(x => x.x == point.x && x.y == point.y);
+}
+const fireToDangerDirect = (tank)=>{
+  let {x, y} = tank;
+  bulletsOnMap
+    .filter(x=>x.direction)
+    .filter(b=>b.x == x || b. y == y)
+    .sort((a,b)=> Math.abs(x-a.x) + Math.abs(y-a.y) - Math.abs(y-b.y) + Math.abs(x-a.x));
+  return bulletsOnMap && bulletsOnMap.length && bulletsOnMap[0].direction + ",ACT";
 }
 let direction;
 let bulletsOnMap = [];
@@ -782,14 +868,21 @@ const BulletFactory = bulletCreator();
 const DirectionSolver = function (board) {
   return {
     get: function () {
-
       const tank = board.getMe();
       if (!tank)
         return "STOP"
       bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
       dangerMap = dangerCells(bulletsOnMap, board);
-      getTanksTrajectories(dangerMap, board);
-      return getSaveCells(tank.x, tank.y, dangerMap) + ",ACT";
+      console.log(board.toString())
+      console.log(dangerMap);
+      return getTanksTrajectories(dangerMap, board);
+
+      let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
+      if(freeSpaceToMove.length){
+        return freeSpaceToMove[0] + ",ACT";
+      }else{
+        return fireToDangerDirect(tank);
+      }
     }
   };
 };
