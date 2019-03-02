@@ -733,6 +733,9 @@ var Board = function (board) {
 
 function getTanksTrajectories(danger, board) {
     let {tank, path} = findClosestTank(board);
+    //tank почему-то наш танк
+    console.log("KEK",danger[tank.x][tank.y]);
+    console.log("DIR",checkTankDirection(dangerMap,tank))
     let tempDanger = danger.map(row => [...row]);
     for (let x = tank.x + 1; x < 43; x++) {
         if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
@@ -765,6 +768,7 @@ function getTanksTrajectories(danger, board) {
     }
     let nextPoint;
     nextPoint = path[0];
+    console.log("path", path[0])
     // temp.forEach(i=>{
     //     if(i.coords.x == path[0].x+1 && currentStep - lastShot >= 3)nextPoint.x++;
     //     else  if(i.coords.x == path[0].x-1 && currentStep - lastShot >= 3)nextPoint.x--;
@@ -838,42 +842,52 @@ function bulletCreator() {
     return {create: this.createBullet};
 }
 
-let currentStep = 0;
-let lastShot = 0;
-let readyToFire = true;
-let bulletsOnMap = [];
-let dangerMap = [];
+function checkTankDirection(danger, tank) {
 
-const BulletFactory = bulletCreator();
-const DirectionSolver = function (board) {
-    return {
-        get: function () {
-            currentStep++;
-            console.log("current step", currentStep)
-            console.log("last shot", lastShot)
-            const tank = board.getMe();
-            if (!tank)
-                return "STOP"
-            bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
-            dangerMap = dangerCells(bulletsOnMap, board);
-            let res1 = getTanksTrajectories(dangerMap, board)
-            if (res1.indexOf('ACT') + 1) lastShot = currentStep;
-            return res1;
+    if (danger[tank.x][tank.y] == '˄') return 'up';
+    else if (danger[tank.x][tank.y] == '˅') return 'down';
+    else if (danger[tank.x][tank.y] == '˂') return 'left';
+    else if (danger[tank.x][tank.y] == '˃') return 'down';
 
-            let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
-            if (freeSpaceToMove.length) {
+}
+    let currentStep = 0;
+    let lastShot = 0;
+    let readyToFire = true;
+    let bulletsOnMap = [];
+    let dangerMap = [];
 
-                return freeSpaceToMove[0] + ",ACT";
-            } else {
-                let res = fireToDangerDirect(tank);
-                if (res.indexOf('ACT') + 1) lastShot = currentStep;
-                return res;
+    const BulletFactory = bulletCreator();
+    const DirectionSolver = function (board) {
+        return {
+            get: function () {
+                currentStep++;
+
+               /* console.log("current step", currentStep)
+                console.log("last shot", lastShot)*/
+                const tank = board.getMe();
+                if (!tank)
+                    return "STOP"
+                bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
+                dangerMap = dangerCells(bulletsOnMap, board);
+
+                let res1 = getTanksTrajectories(dangerMap, board)
+                if (res1.indexOf('ACT') + 1) lastShot = currentStep;
+                return res1;
+
+                let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
+                if (freeSpaceToMove.length) {
+
+                    return freeSpaceToMove[0] + ",ACT";
+                } else {
+                    let res = fireToDangerDirect(tank);
+                    if (res.indexOf('ACT') + 1) lastShot = currentStep;
+                    return res;
+                }
+
+
             }
-
-
-        }
+        };
     };
-};
 
 //END
 
