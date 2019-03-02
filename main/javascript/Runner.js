@@ -750,7 +750,19 @@ let direction;
 let bulletsOnMap = [];
 let dangerMap = [];
 
-
+const BulletFactory = bulletCreator();
+const DirectionSolver = function (board) {
+  return {
+    get: function () {
+      const tank = board.getMe();
+      bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
+      dangerMap = dangerCells(bulletsOnMap, board);
+      console.log("kek" +  new Point(tank.x, tank.y).fastestPath(new Point(5,3),
+            convertDengerBoardToMap(dangerCells(bulletsOnMap, board))));
+      return getSaveCells(tank.x, tank.y, dangerMap) + ",ACT";
+    }
+  };
+};
 
 
 
