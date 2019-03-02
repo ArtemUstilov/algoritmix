@@ -505,6 +505,8 @@ const DirectionSolver = function (board) {
       const tank = board.getMe();
       const bullets = board.getBullets();
 
+
+
       bulletsOnMap.filter(x=>!x.direction).forEach(x => {
         if (bullets.contains(Point(x.x, x.y + 2))) {
           x.direction = "UP";
@@ -520,9 +522,10 @@ const DirectionSolver = function (board) {
         } else{
           bulletsOnMap.remove(x);
         }
-
       })
-      
+
+      bullets.forEach(b=>bulletsOnMap.add(Bullet(b.x,b.y)));
+
       return "LEFT,ACT";
     }
   };
