@@ -373,7 +373,35 @@ function bulletCreator(){
   return {create: this.createBullet};
 }
 
-
+const getSaveCells = function (x, y, dangerMap) {
+  const result = [];
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if(x.x >= 0 && x.x < board.size.x && y >= 0 && y < board.size.y) continue;
+      if(!dangerMap[x+dx][y+dy]){
+        const str = dx + " " + dy
+        switch(str){
+          case '-1 0':
+            result.push('LEFT');
+            break;
+          case '1 0':
+            result.push('RIGHT');
+            break;
+          case '0 1':
+            result.push('UP');
+            break;
+          case '0 -1':
+            result.push('DOWN');
+            break;
+          case '0 0':
+            result.push('STOP');
+            break;
+        }
+      }
+    }
+  }
+  return result;
+};
 var pt = function (x, y) {
     return new Point(x, y);
 };
@@ -621,7 +649,7 @@ var Board = function (board) {
         countNear: countNear,
         isBarrierAt: isBarrierAt,
         getBarriers: getBarriers,
-        getAt: getAt
+        getAt: getAt,
     };
 };
 
@@ -641,10 +669,8 @@ const DirectionSolver = function (board) {
     get: function () {
       const tank = board.getMe();
       bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
-
-      console.log(dangerCells(bulletsOnMap, board));
-
-      return "LEFT,ACT";
+      dangerMap = dangerCells(bulletsOnMap, board);
+      return getSaveCells(tank.x, tank.y, dangerMap) + ",ACT";
     }
   };
 };
