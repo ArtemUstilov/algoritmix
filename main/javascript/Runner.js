@@ -19,48 +19,43 @@
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
  * #L%
  */
-const bulletDirections = (bullets, bulletsOnMap, board)=>{
-  bulletsOnMap = bulletsOnMap.reduce((ar,x) => {
-    if(x.direction){
-      let X = x.x, Y = x.y;
-      switch(x.direction){
-        case 'UP':
-          Y += 2;
-          break;
-        case 'DOWN':
-          Y -= 2;
-          break;
-        case 'RIGHT':
-          X+=2;
-          break;
-        case 'LEFT':
-          X-=2;
-      }
-      if(board.getAt(X,Y) === Elements.BULLET)
-        ar.push(x);
-    }
-    else
-    if (has(bullets,new Point(x.x, x.y + 2))) {
-      x.direction = "UP";
-      ar.push(x);
-    } else
-    if (has(bullets,new Point(x.x, x.y - 2))) {
-      x.direction = "DOWN";
-      ar.push(x);
-    } else
-    if (has(bullets,new Point(x.x + 2, x.y))) {
-      x.direction = "RIGHT";
-      ar.push(x);
-    } else
-    if (has(bullets,new Point(x.x - 2, x.y))) {
-      x.direction = "LEFT";
-      ar.push(x);
-    }
-    return ar;
-  }, []);
-  bulletsOnMap.forEach(x=>x.update());
-  bullets.filter(x=>!has(bulletsOnMap,x)).forEach(b=>bulletsOnMap.push(BulletFactory.create(b.x,b.y)));
-  return bulletsOnMap;
+const bulletDirections = (bullets, bulletsOnMap, board) => {
+    bulletsOnMap = bulletsOnMap.reduce((ar, x) => {
+        if (x.direction) {
+            let X = x.x, Y = x.y;
+            switch (x.direction) {
+                case 'UP':
+                    Y += 2;
+                    break;
+                case 'DOWN':
+                    Y -= 2;
+                    break;
+                case 'RIGHT':
+                    X += 2;
+                    break;
+                case 'LEFT':
+                    X -= 2;
+            }
+            if (board.getAt(X, Y) === Elements.BULLET)
+                ar.push(x);
+        } else if (has(bullets, new Point(x.x, x.y + 2))) {
+            x.direction = "UP";
+            ar.push(x);
+        } else if (has(bullets, new Point(x.x, x.y - 2))) {
+            x.direction = "DOWN";
+            ar.push(x);
+        } else if (has(bullets, new Point(x.x + 2, x.y))) {
+            x.direction = "RIGHT";
+            ar.push(x);
+        } else if (has(bullets, new Point(x.x - 2, x.y))) {
+            x.direction = "LEFT";
+            ar.push(x);
+        }
+        return ar;
+    }, []);
+    bulletsOnMap.forEach(x => x.update());
+    bullets.filter(x => !has(bulletsOnMap, x)).forEach(b => bulletsOnMap.push(BulletFactory.create(b.x, b.y)));
+    return bulletsOnMap;
 }
 const dangerCells = (bulletsArray, board) => {
   const tank = board.getMe();
@@ -103,13 +98,7 @@ const dangerCells = (bulletsArray, board) => {
     .forEach(x=>{
       dangerMap[x.x][x.y] = Elements.BULLET;
     });
-  board.getBarriers().forEach(x=>{
-    dangerMap[x.x][x.y] = Elements.BATTLE_WALL
-  });
-  board.getEnemies().forEach(x=>{
-    dangerMap[x.x][x.y] = Elements.TANK_DOWN;
-  });
-  return dangerMap;
+    return dangerMap;
 }
 
 
@@ -306,72 +295,156 @@ Direction.valueOf = function (index) {
 };
 
 class Point {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
 
-  equals(o) {
-    return o.getX() == this.x && o.getY() == this.y;
-  }
+    equal(o) {
+        return o.getX() == this.x && o.getY() == this.y;
+    }
 
-  toString() {
-    return '[' + this.x + ',' + this.y + ']';
-  }
+    toString() {
+        return '[' + this.x + ',' + this.y + ']';
+    }
 
-  isOutOf(boardSize) {
-    return this.x >= boardSize || this.y >= boardSize || this.x < 0 || this.y < 0;
-  }
+    isOutOf(boardSize) {
+        return this.x >= boardSize || this.y >= boardSize || this.x < 0 || this.y < 0;
+    }
 
-  getX() {
-    return this.x;
-  }
+    getX() {
+        return this.x;
+    }
 
-  getY() {
-    return this.y;
-  }
+    getY() {
+        return this.y;
+    }
 
-  moveTo(direction) {
-    return pt(direction.changeX(this.x), direction.changeY(this.y));
-  }
+    shift(dx,dy){
+        return new Point(this.x+dx, this.y+dy);
+    }
+
+    insideSquare(size){
+        return this.x >= 0 && this.y >= 0 && this.x < size && this.y < size;
+    }
+    moveTo(direction) {
+        return pt(direction.changeX(this.x), direction.changeY(this.y));
+    }
+
+    distanceSq(p) {
+        //distance from a to b
+        return Math.pow(p.x - this.x, 2) + Math.pow(p.y - this.y, 2);
+    }
+
+    fastestPath(p, map) {
+        return waveAlgorithm(map, this, p);
+    }
 };
 
-function bulletCreator(){
-  class Bullet extends Point {
-    constructor(x, y, id) {
-      super(x, y);
-      this.direction = undefined;
-      this.id = id;
-      this.initX = x;
-      this.initY = y;
+function waveAlgorithm(map, pos, dest){
+    //init map where in every cell its path from pos
+    //if its unpassable cell value is -1
+    pos = new Point(pos.x,pos.y);
+    if(pos.distanceSq(dest) < 2)
+        return [dest];
+    let mapSheme = new Array(map.length)
+        .fill([])
+        .map(()=>new Array(map.length))
+        .map(c=>c.fill(0))
+        .map((row,x)=>row
+            .map((c,y)=>map[x][y] ? 0 : -1))
+    mapSheme[pos.y][pos.x] = 0;
+    mapSheme[dest.y][dest.x] = 0;
+    //wave its all cells whose neighbors need to be incremented
+    let wave = [pos];
+    //loop that increments all cells until we come to pos from dest
+    let counter = 0;
+    while(!mapSheme[dest.y][dest.x] && counter < 150){
+        wave = incrementNeighbors(mapSheme, map, wave, pos);
+        counter++;
     }
-    toString(){
-      return this.x + " " + this.y + " " + this.direction;
+    if(counter == 500)
+        return;
+        //return waveAlgorithm(map, pos, dest);
+    let lastStep = dest;
+    let path = [];
+    console.log(mapSheme)
+    while(!lastStep.equal(pos)){
+        path.unshift(lastStep);
+        lastStep = decrementedCell(mapSheme, lastStep);
+        if(!lastStep)return path;
     }
-    update(){
-      switch(this.direction){
-        case 'UP':
-          this.y += 2;
-          break;
-        case 'DOWN':
-          this.y -= 2;
-          break;
-        case 'RIGHT':
-          this.x+=2;
-          break;
-        case 'LEFT':
-          this.x-=2;
-          break;
-        default:
-      }
+    //path it is array of points
+    return path;
+}
+
+function incrementNeighbors(mapSheme, map, wave, pos){
+    //icnrement all nearby to wave cells
+    let nextWave = [];
+    if(!wave || !wave.length)return;
+    let value = mapSheme[wave[0].y][wave[0].x] + 1;
+    wave.forEach(waveI=>{
+        getNearbyCells(
+            waveI, (x)=>
+                x.insideSquare(map.length)&& map[x.y][x.x]&& !mapSheme[x.y][x.x]&& !x.equal(pos)
+        ).forEach(n=>{
+            mapSheme[n.y][n.x] = value;
+            nextWave.push(n);
+        })
+    })
+    return nextWave;
+}
+function getNearbyCells(p,validCB){
+    //gets nearby cells
+    return [p.shift(-1,0), p.shift(1,0), p.shift(0, -1), p.shift(0,1)]
+        .filter(x=>validCB(x));
+}
+function decrementedCell(mapSheme, lastStep) {
+    //finds cell that has n-1 value to find all path to pos
+    return getNearbyCells(lastStep, (x)=>x.insideSquare(mapSheme.length))
+        .find((cell)=>mapSheme[cell.y][cell.x] == mapSheme[lastStep.y][lastStep.x] - 1)
+}
+
+
+function bulletCreator() {
+    class Bullet extends Point {
+        constructor(x, y, id) {
+            super(x, y);
+            this.direction = undefined;
+            this.id = id;
+            this.initX = x;
+            this.initY = y;
+        }
+
+        toString() {
+            return this.x + " " + this.y + " " + this.direction;
+        }
+
+        update() {
+            switch (this.direction) {
+                case 'UP':
+                    this.y += 2;
+                    break;
+                case 'DOWN':
+                    this.y -= 2;
+                    break;
+                case 'RIGHT':
+                    this.x += 2;
+                    break;
+                case 'LEFT':
+                    this.x -= 2;
+                    break;
+                default:
+            }
+        }
     }
-  }
-  this.counter = 0;
-  this.createBullet = (x, y) => {
-    this.id++;
-    return new Bullet(x, y, this.id);
-  }
-  return {create: this.createBullet};
+
+    this.counter = 0;
+    this.createBullet = (x, y) => {
+        this.id++;
+        return new Bullet(x, y, this.id);
+    }
+    return {create: this.createBullet};
 }
 
 const getSaveCells = function (x, y, dangerMap) {
@@ -438,6 +511,14 @@ const LengthToXY = function (boardSize) {
         }
     };
 };
+
+function convertDengerBoardToMap(dangerBoard) {
+    console.log(dangerBoard);
+    return dangerBoard.map(row => {
+        return row.map(cell => cell === 0 ? 1 : 0);
+    });
+}
+
 
 var Board = function (board) {
     const contains = function (a, obj) {
@@ -690,8 +771,8 @@ function getTanksTrajectories(danger, board) {
 const random = function (n) {
     return Math.floor(Math.random() * n);
 };
-const has = (array, point)=>{
-  return array.some(x=>x.x == point.x && x.y == point.y);
+const has = (array, point) => {
+    return array.some(x => x.x == point.x && x.y == point.y);
 }
 let direction;
 let bulletsOnMap = [];
@@ -708,7 +789,6 @@ const DirectionSolver = function (board) {
       bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
       dangerMap = dangerCells(bulletsOnMap, board);
       getTanksTrajectories(dangerMap, board);
-
       return getSaveCells(tank.x, tank.y, dangerMap) + ",ACT";
     }
   };
