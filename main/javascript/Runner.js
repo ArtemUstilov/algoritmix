@@ -497,7 +497,7 @@ const DirectionSolver = function(board){
           const tank = board.getMe();
 
 
-          return "ACT";
+          return "LEFT,ACT";
         }
     };
 };
