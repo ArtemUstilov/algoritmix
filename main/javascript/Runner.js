@@ -455,7 +455,7 @@ var Board = function (board) {
         return getNear(x, y).includes(element);
     };
 
-    const getNiarest = function (x, y, elements) {
+    const getNearest = function (x, y, elements) {
         return elements.map(element => {
             return {
                 element: element,
