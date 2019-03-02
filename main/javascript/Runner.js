@@ -179,7 +179,7 @@ const processBoard = function (boardString) {
 };
 
 // you can get this code after registration on the server with your email
-let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/17faabliad195an6te8s?code=5343055104096821365";
+let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/i7zskjkz5a93j272s0au?code=4803967771983834522";
 
 url = url.replace("http", "ws");
 url = url.replace("board/player/", "ws?user=");
@@ -756,7 +756,13 @@ function getTanksTrajectories(danger, board) {
     }
     let nextPoint;
     nextPoint = path[0];
+    // temp.forEach(i=>{
+    //     if(i.coords.x == path[0].x+1 && currentStep - lastShot >= 3)nextPoint.x++;
+    //     else  if(i.coords.x == path[0].x-1 && currentStep - lastShot >= 3)nextPoint.x--;
+    // })
+    if(currentStep - lastShot <= path[0].length-1 || canShot())
     return findDirection(board.getMe(), nextPoint) + str;
+    return findDirection(board.getMe(), nextPoint);
 }
 const has = (array, point) => {
     return array.some(x => x.x == point.x && x.y == point.y);
@@ -768,6 +774,9 @@ const fireToDangerDirect = (tank)=>{
         .filter(b=>b.x == x || b. y == y)
         .sort((a,b)=> Math.abs(x-a.x) + Math.abs(y-a.y) - Math.abs(y-b.y) + Math.abs(x-a.x));
     return bulletsOnMap && bulletsOnMap.length && bulletsOnMap[0].direction + ",ACT";
+}
+function canShot(){
+    return currentStep - lastShot >= 4;
 }
 
 function bulletCreator() {
@@ -809,7 +818,9 @@ function bulletCreator() {
     }
     return {create: this.createBullet};
 }
-
+let currentStep = 0;
+let lastShot = 0;
+let readyToFire = true;
 let bulletsOnMap = [];
 let dangerMap = [];
 
@@ -817,19 +828,29 @@ const BulletFactory = bulletCreator();
 const DirectionSolver = function (board) {
     return {
         get: function () {
+            currentStep++;
+            console.log("current step",currentStep)
+            console.log("last shot",lastShot)
             const tank = board.getMe();
             if (!tank)
                 return "STOP"
             bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
             dangerMap = dangerCells(bulletsOnMap, board);
-            return getTanksTrajectories(dangerMap, board);
+            let res1= getTanksTrajectories(dangerMap, board)
+            if(res1.indexOf('ACT') + 1) lastShot=currentStep;
+            return res1;
 
             let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
             if(freeSpaceToMove.length){
+
                 return freeSpaceToMove[0] + ",ACT";
             }else{
-                return fireToDangerDirect(tank);
+                let res = fireToDangerDirect(tank);
+                if(res.indexOf('ACT') + 1) lastShot=currentStep;
+                return res;
             }
+
+
         }
     };
 };
