@@ -19,49 +19,49 @@
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
  * #L%
  */
-var util = require('util');
-var WSocket = require('ws');
+const util = require('util');
+const WSocket = require('ws');
 
-var log = function(string) {
-    console.log(string);
-    if (!!printBoardOnTextArea) {
-        printLogOnTextArea(string);
-    }
+const log = function (string) {
+  console.log(string);
+  if (!!printBoardOnTextArea) {
+    printLogOnTextArea(string);
+  }
 };
 
-var printArray = function (array) {
-    var result = [];
-    for (var index in array) {
-        var element = array[index];
-        result.push(element.toString());
-    }
-    return "[" + result + "]";
+const printArray = function (array) {
+  const result = [];
+  for (let index in array) {
+    const element = array[index];
+    result.push(element.toString());
+  }
+  return "[" + result + "]";
 };
 
-var processBoard = function(boardString) {
-    var board = new Board(boardString);
-    if (!!printBoardOnTextArea) {
-        printBoardOnTextArea(board.boardAsString());
-    }
+const processBoard = function (boardString) {
+  const board = new Board(boardString);
+  if (!!printBoardOnTextArea) {
+    printBoardOnTextArea(board.boardAsString());
+  }
 
-    var logMessage = board + "\n\n";
-    var answer = new DirectionSolver(board).get().toString();
-    logMessage += "Answer: " + answer + "\n";
-    logMessage += "-----------------------------------\n";
+  let logMessage = board + "\n\n";
+  const answer = new DirectionSolver(board).get().toString();
+  logMessage += "Answer: " + answer + "\n";
+  logMessage += "-----------------------------------\n";
 
-    log(logMessage);
+  log(logMessage);
 
-    return answer;
+  return answer;
 };
 
 // you can get this code after registration on the server with your email
-var url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/71hk8ayegb2ayigd3oix?code=9199167215377388441";
+let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/71hk8ayegb2ayigd3oix?code=9199167215377388441";
 
 url = url.replace("http", "ws");
 url = url.replace("board/player/", "ws?user=");
 url = url.replace("?code=", "&code=");
 
-var ws;
+let ws;
 
 function connect() {
     ws = new WSocket(url);
@@ -80,106 +80,111 @@ function connect() {
     });
 
     ws.on('message', function(message) {
-        var pattern = new RegExp(/^board=(.*)$/);
-        var parameters = message.match(pattern);
-        var boardString = parameters[1];
-        var answer = processBoard(boardString);
-        ws.send(answer);
+      const pattern = new RegExp(/^board=(.*)$/);
+      const parameters = message.match(pattern);
+      const boardString = parameters[1];
+      const answer = processBoard(boardString);
+      ws.send(answer);
     });
 }
 
 connect();
 
-var Elements = {
-    
-    NONE: ' ',
-    BATTLE_WALL: '☼',
-    BANG: 'Ѡ',
+const Elements = {
 
-    CONSTRUCTION: '╬',
+  NONE: ' ',
+  BATTLE_WALL: '☼',
+  BANG: 'Ѡ',
 
-    CONSTRUCTION_DESTROYED_DOWN: '╩',
-    CONSTRUCTION_DESTROYED_UP: '╦',
-    CONSTRUCTION_DESTROYED_LEFT: '╠',
-    CONSTRUCTION_DESTROYED_RIGHT: '╣',
+  CONSTRUCTION: '╬',
 
-    CONSTRUCTION_DESTROYED_DOWN_TWICE: '╨',
-    CONSTRUCTION_DESTROYED_UP_TWICE: '╥',
-    CONSTRUCTION_DESTROYED_LEFT_TWICE: '╞',
-    CONSTRUCTION_DESTROYED_RIGHT_TWICE: '╡',
+  CONSTRUCTION_DESTROYED_DOWN: '╩',
+  CONSTRUCTION_DESTROYED_UP: '╦',
+  CONSTRUCTION_DESTROYED_LEFT: '╠',
+  CONSTRUCTION_DESTROYED_RIGHT: '╣',
 
-    CONSTRUCTION_DESTROYED_LEFT_RIGHT: '│',
-    CONSTRUCTION_DESTROYED_UP_DOWN: '─',
+  CONSTRUCTION_DESTROYED_DOWN_TWICE: '╨',
+  CONSTRUCTION_DESTROYED_UP_TWICE: '╥',
+  CONSTRUCTION_DESTROYED_LEFT_TWICE: '╞',
+  CONSTRUCTION_DESTROYED_RIGHT_TWICE: '╡',
 
-    CONSTRUCTION_DESTROYED_UP_LEFT: '┌',
-    CONSTRUCTION_DESTROYED_RIGHT_UP: '┐',
-    CONSTRUCTION_DESTROYED_DOWN_LEFT: '└',
-    CONSTRUCTION_DESTROYED_DOWN_RIGHT: '┘',
+  CONSTRUCTION_DESTROYED_LEFT_RIGHT: '│',
+  CONSTRUCTION_DESTROYED_UP_DOWN: '─',
 
-    CONSTRUCTION_DESTROYED: ' ',
+  CONSTRUCTION_DESTROYED_UP_LEFT: '┌',
+  CONSTRUCTION_DESTROYED_RIGHT_UP: '┐',
+  CONSTRUCTION_DESTROYED_DOWN_LEFT: '└',
+  CONSTRUCTION_DESTROYED_DOWN_RIGHT: '┘',
 
-    BULLET: '•',
+  CONSTRUCTION_DESTROYED: ' ',
 
-    TANK_UP: '▲',
-    TANK_RIGHT: '►',
-    TANK_DOWN: '▼',
-    TANK_LEFT: '◄',
+  BULLET: '•',
 
-    OTHER_TANK_UP: '˄',
-    OTHER_TANK_RIGHT: '˃',
-    OTHER_TANK_DOWN: '˅',
-    OTHER_TANK_LEFT: '˂',
+  TANK_UP: '▲',
+  TANK_RIGHT: '►',
+  TANK_DOWN: '▼',
+  TANK_LEFT: '◄',
 
-    AI_TANK_UP: '?',
-    AI_TANK_RIGHT: '»',
-    AI_TANK_DOWN: '¿',
-    AI_TANK_LEFT: '«'
-    
+  OTHER_TANK_UP: '˄',
+  OTHER_TANK_RIGHT: '˃',
+  OTHER_TANK_DOWN: '˅',
+  OTHER_TANK_LEFT: '˂',
+
+  AI_TANK_UP: '?',
+  AI_TANK_RIGHT: '»',
+  AI_TANK_DOWN: '¿',
+  AI_TANK_LEFT: '«'
+
 };
 
-var D = function(index, dx, dy, name){
+const D = function (index, dx, dy, name) {
 
-    var changeX = function(x) {
-        return x + dx;
-    };
+  const changeX = function (x) {
+    return x + dx;
+  };
 
-    var changeY = function(y) {
-        return y + dy;
-    };
+  const changeY = function (y) {
+    return y + dy;
+  };
 
-    var change = function(point) {
-        return point.moveTo(this);
-    };
+  const change = function (point) {
+    return point.moveTo(this);
+  };
 
-    var inverted = function() {
-        switch (this) {
-            case Direction.UP : return Direction.DOWN;
-            case Direction.DOWN : return Direction.UP;
-            case Direction.LEFT : return Direction.RIGHT;
-            case Direction.RIGHT : return Direction.LEFT;
-            default : return Direction.STOP;
-        }
-    };
+  const inverted = function () {
+    switch (this) {
+      case Direction.UP :
+        return Direction.DOWN;
+      case Direction.DOWN :
+        return Direction.UP;
+      case Direction.LEFT :
+        return Direction.RIGHT;
+      case Direction.RIGHT :
+        return Direction.LEFT;
+      default :
+        return Direction.STOP;
+    }
+  };
 
-    var toString = function() {
-        return name;
-    };
+  const toString = function () {
+    return name;
+  };
 
-    return {
-        changeX : changeX,
+  return {
+    changeX: changeX,
 
-        changeY : changeY,
+    changeY: changeY,
 
-        change : change,
+    change: change,
 
-        inverted : inverted,
+    inverted: inverted,
 
-        toString : toString,
+    toString: toString,
 
-        getIndex : function() {
-            return index;
-        }
-    };
+    getIndex: function () {
+      return index;
+    }
+  };
 };
 
 var Direction = {
@@ -196,265 +201,267 @@ Direction.values = function() {
 };
 
 Direction.valueOf = function(index) {
-    var directions = Direction.values();
-    for (var i in directions) {
-        var direction = directions[i];
-        if (direction.getIndex() == index) {
+  const directions = Direction.values();
+  for (let i in directions) {
+      const direction = directions[i];
+      if (direction.getIndex() == index) {
              return direction;
         }
     }
     return Direction.STOP;
 };
 
-var Point = function (x, y) {
-    return {
-        equals : function (o) {
-            return o.getX() == x && o.getY() == y;
-        },
+const Point = function (x, y) {
+  return {
+    equals: function (o) {
+      return o.getX() == x && o.getY() == y;
+    },
 
-        toString : function() {
-            return '[' + x + ',' + y + ']';
-        },
+    toString: function () {
+      return '[' + x + ',' + y + ']';
+    },
 
-        isOutOf : function(boardSize) {
-            return x >= boardSize || y >= boardSize || x < 0 || y < 0;
-        },
+    isOutOf: function (boardSize) {
+      return x >= boardSize || y >= boardSize || x < 0 || y < 0;
+    },
 
-        getX : function() {
-            return x;
-        },
+    getX: function () {
+      return x;
+    },
 
-        getY : function() {
-            return y;
-        },
+    getY: function () {
+      return y;
+    },
 
-        moveTo : function(direction) {
-            return pt(direction.changeX(x), direction.changeY(y));
-        }
+    moveTo: function (direction) {
+      return pt(direction.changeX(x), direction.changeY(y));
     }
+  }
 };
 
 var pt = function(x, y) {
     return new Point(x, y);
 };
 
-var LengthToXY = function(boardSize) {
-    function inversionY(y) {
-        return boardSize - 1 - y;
+const LengthToXY = function (boardSize) {
+  function inversionY(y) {
+    return boardSize - 1 - y;
+  }
+
+  function inversionX(x) {
+    return x;
+  }
+
+  return {
+    getXY: function (length) {
+      if (length == -1) {
+        return null;
+      }
+      const x = inversionX(length % boardSize);
+      const y = inversionY(Math.ceil(length / boardSize));
+      return new Point(x, y);
+    },
+
+    getLength: function (x, y) {
+      const xx = inversionX(x);
+      const yy = inversionY(y);
+      return yy * boardSize + xx;
     }
-
-    function inversionX(x) {
-        return x;
-    }
-
-    return {
-        getXY : function(length) {
-            if (length == -1) {
-                return null;
-            }
-            var x = inversionX(length % boardSize);
-            var y = inversionY(Math.ceil(length / boardSize));
-            return new Point(x, y);
-        },
-
-        getLength : function(x, y) {
-            var xx = inversionX(x);
-            var yy = inversionY(y);
-            return yy*boardSize + xx;
-        }
-    };
+  };
 };
 
 var Board = function(board){
-    var contains  = function(a, obj) {
-        var i = a.length;
-        while (i--) {
-            if (a[i].equals(obj)) {
-                return true;
-            }
-        }
-        return false;
-    };
+  const contains = function (a, obj) {
+    let i = a.length;
+    while (i--) {
+      if (a[i].equals(obj)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
-    var sort = function(all) {
-        return all.sort(function(pt1, pt2) {
-            return (pt1.getY()*1000 + pt1.getX()) -
-                (pt2.getY()*1000 + pt2.getX());
-        });
+  const sort = function (all) {
+    return all.sort(function (pt1, pt2) {
+      return (pt1.getY() * 1000 + pt1.getX()) -
+        (pt2.getY() * 1000 + pt2.getX());
+    });
+  };
+
+  const removeDuplicates = function (all) {
+    const result = [];
+    for (let index in all) {
+      const point = all[index];
+      if (!contains(result, point)) {
+        result.push(point);
+      }
+    }
+    return sort(result);
+  };
+
+  const boardSize = function () {
+    return Math.sqrt(board.length);
+  };
+
+  const size = boardSize();
+  const xyl = new LengthToXY(size);
+
+  const getMe = function () {
+    let result = [];
+    result = result.concat(findAll(Elements.TANK_UP));
+    result = result.concat(findAll(Elements.TANK_DOWN));
+    result = result.concat(findAll(Elements.TANK_LEFT));
+    result = result.concat(findAll(Elements.TANK_RIGHT));
+    if (result.lenght == 0) {
+      return null;
+    }
+    return result[0];
+  };
+
+  const getEnemies = function () {
+    let result = [];
+    result = result.concat(findAll(Elements.AI_TANK_UP));
+    result = result.concat(findAll(Elements.AI_TANK_DOWN));
+    result = result.concat(findAll(Elements.AI_TANK_LEFT));
+    result = result.concat(findAll(Elements.AI_TANK_RIGHT));
+    result = result.concat(findAll(Elements.OTHER_TANK_UP));
+    result = result.concat(findAll(Elements.OTHER_TANK_DOWN));
+    result = result.concat(findAll(Elements.OTHER_TANK_LEFT));
+    result = result.concat(findAll(Elements.OTHER_TANK_RIGHT));
+    return result;
+  };
+
+  const getBullets = function () {
+    let result = [];
+    result = result.concat(findAll(Elements.BULLET));
+    return result;
+  };
+
+  const isGameOver = function () {
+    return getMe() == null;
+  };
+
+  const isBulletAt = function (x, y) {
+    if (pt(x, y).isOutOf(size)) {
+      return false;
     }
 
-    var removeDuplicates = function(all) {
-        var result = [];
-        for (var index in all) {
-            var point = all[index];
-            if (!contains(result, point)) {
-                result.push(point);
-            }
-        }
-        return sort(result);
-    };
+    return getAt(x, y) == Elements.BULLET;
+  };
 
-    var boardSize = function() {
-        return Math.sqrt(board.length);
-    };
-
-    var size = boardSize();
-    var xyl = new LengthToXY(size);
-
-    var getMe = function() {
-        var result = [];
-        result = result.concat(findAll(Elements.TANK_UP));
-        result = result.concat(findAll(Elements.TANK_DOWN));
-        result = result.concat(findAll(Elements.TANK_LEFT));
-        result = result.concat(findAll(Elements.TANK_RIGHT));
-        if (result.lenght == 0) {
-            return null;
-        }
-        return result[0];
-    };
-
-    var getEnemies = function() {
-        var result = [];
-        result = result.concat(findAll(Elements.AI_TANK_UP));
-        result = result.concat(findAll(Elements.AI_TANK_DOWN));
-        result = result.concat(findAll(Elements.AI_TANK_LEFT));
-        result = result.concat(findAll(Elements.AI_TANK_RIGHT));
-        result = result.concat(findAll(Elements.OTHER_TANK_UP));
-        result = result.concat(findAll(Elements.OTHER_TANK_DOWN));
-        result = result.concat(findAll(Elements.OTHER_TANK_LEFT));
-        result = result.concat(findAll(Elements.OTHER_TANK_RIGHT));
-        return result;
-    };
-
-    var getBullets = function() {
-        var result = [];
-        result = result.concat(findAll(Elements.BULLET));
-        return result;
+  const isAt = function (x, y, element) {
+    if (pt(x, y).isOutOf(size)) {
+      return false;
     }
+    return getAt(x, y) == element;
+  };
 
-    var isGameOver = function() {
-        return getMe() == null;
-    };
-
-    var isBulletAt = function(x, y) {
-        if (pt(x, y).isOutOf(size)) {
-            return false;
-        }
-
-        return getAt(x, y) == Elements.BULLET;
-    }
-
-    var isAt = function(x, y, element) {
-        if (pt(x, y).isOutOf(size)) {
-            return false;
-        }
-        return getAt(x, y) == element;
-    };
-
-    var getAt = function(x, y) {
+  var getAt = function(x, y) {
         if (pt(x, y).isOutOf(size)) {
             return Elements.BATTLE_WALL;
         }
         return board.charAt(xyl.getLength(x, y));
     };
 
-    var boardAsString = function() {
-        var result = "";
-        for (var i = 0; i < size; i++) {
-            result += board.substring(i * size, (i + 1) * size);
-            result += "\n";
-        }
-        return result;
-    };
+  const boardAsString = function () {
+    let result = "";
+    for (let i = 0; i < size; i++) {
+      result += board.substring(i * size, (i + 1) * size);
+      result += "\n";
+    }
+    return result;
+  };
 
-    var getBarriers = function() {
-        var result = [];
-        result = result.concat(findAll(Elements.BATTLE_WALL));
-        result = result.concat(findAll(Elements.CONSTRUCTION));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_LEFT));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_RIGHT));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN_TWICE));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP_TWICE));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_LEFT_TWICE));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_RIGHT_TWICE));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_LEFT_RIGHT));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP_DOWN));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP_LEFT));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_RIGHT_UP));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN_LEFT));
-        result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN_RIGHT));
-        return sort(result);
-    };
+  const getBarriers = function () {
+    let result = [];
+    result = result.concat(findAll(Elements.BATTLE_WALL));
+    result = result.concat(findAll(Elements.CONSTRUCTION));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_LEFT));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_RIGHT));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN_TWICE));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP_TWICE));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_LEFT_TWICE));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_RIGHT_TWICE));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_LEFT_RIGHT));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP_DOWN));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_UP_LEFT));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_RIGHT_UP));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN_LEFT));
+    result = result.concat(findAll(Elements.CONSTRUCTION_DESTROYED_DOWN_RIGHT));
+    return sort(result);
+  };
 
-    var toString = function() {
-        return util.format("Board:\n%s\n" +
-            "My tank at: %s\n" +
-            "Enemies at: %s\n" +
-            "Bulets at: %s\n",
-                boardAsString(),
-                getMe(),
-                getEnemies(),
-                getBullets()
-            );
-    };
+  const toString = function () {
+    return util.format("Board:\n%s\n" +
+      "My tank at: %s\n" +
+      "Enemies at: %s\n" +
+      "Bulets at: %s\n",
+      boardAsString(),
+      getMe(),
+      getEnemies(),
+      getBullets()
+    );
+  };
 
-    var findAll = function(element) {
-        var result = [];
-        for (var i = 0; i < size*size; i++) {
-            var point = xyl.getXY(i);
-            if (isAt(point.getX(), point.getY(), element)) {
+  var findAll = function(element) {
+      const result = [];
+      for (let i = 0; i < size*size; i++) {
+          const point = xyl.getXY(i);
+          if (isAt(point.getX(), point.getY(), element)) {
                 result.push(point);
             }
         }
         return sort(result);
     };
 
-    var isAnyOfAt = function(x, y, elements) {
-        if (pt(x, y).isOutOf(size)) {
-            return false;
-        }
-        for (var index in elements) {
-            var element = elements[index];
-            if (isAt(x, y, element)) {
-                return true;
-            }
-        }
-        return false;
-    };
+  const isAnyOfAt = function (x, y, elements) {
+    if (pt(x, y).isOutOf(size)) {
+      return false;
+    }
+    for (let index in elements) {
+      const element = elements[index];
+      if (isAt(x, y, element)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
-    // TODO применить этот подход в других js клиентах
-    var getNear = function(x, y) {
-        var result = [];
-        for (var dx = -1; dx <= 1; dx++) {
-            for (var dy = -1; dy <= 1; dy++) {
-                if (dx == 0 && dy == 0) continue;
-                result.push(getAt(x + dx, y + dy));
-            }
-        }
-        return result;
-    };
+  // TODO применить этот подход в других js клиентах
+  const getNear = function (x, y) {
+    const result = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx == 0 && dy == 0) continue;
+        result.push(getAt(x + dx, y + dy));
+      }
+    }
+    return result;
+  };
 
-    var isNear = function(x, y, element) {
-        return getNear(x, y).includes(element);
-    };
+  const isNear = function (x, y, element) {
+    return getNear(x, y).includes(element);
+  };
 
-    var isBarrierAt = function(x, y) {
-        if (pt(x, y).isOutOf(size)) {
-            return true;
-        }
+  const isBarrierAt = function (x, y) {
+    if (pt(x, y).isOutOf(size)) {
+      return true;
+    }
 
-        return contains(getBarriers(), pt(x, y));
-    };
+    return contains(getBarriers(), pt(x, y));
+  };
 
-    var countNear = function(x, y, element) {
-        return getNear(x, y)
-                    .filter(function(value) { return value === element })
-                    .length;
-    };
+  const countNear = function (x, y, element) {
+    return getNear(x, y)
+      .filter(function (value) {
+        return value === element
+      })
+      .length;
+  };
 
-    return {
+  return {
         size : boardSize,
         getMe : getMe,
         getEnemies : getEnemies,
@@ -474,23 +481,23 @@ var Board = function(board){
     };
 };
 
-var random = function(n){
-    return Math.floor(Math.random()*n);
+const random = function (n) {
+  return Math.floor(Math.random() * n);
 };
 
-var direction;
+let direction;
 
-var DirectionSolver = function(board){
+const DirectionSolver = function(board){
 
     return {
         /**
          * @return next hero action
          */
         get : function() {
-            var tank = board.getMe();
-            
+          const tank = board.getMe();
 
-            return "ACT";
+
+          return "ACT";
         }
     };
 };
