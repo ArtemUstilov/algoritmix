@@ -119,14 +119,14 @@ const dangerCells = (bulletsArray, board) => {
             ar.push({x: x2, y: y2});
         } else {
             ar.push({x: x.x, y: x.y});
-            ar.push({x: x + 1, y: x.y});
-            ar.push({x: x + 2, y: x.y});
-            ar.push({x: x - 1, y: x.y});
-            ar.push({x: x - 2, y: x.y});
-            ar.push({x: x, y: x.y - 1});
-            ar.push({x: x, y: x.y - 2});
-            ar.push({x: x, y: x.y + 1});
-            ar.push({x: x, y: x.y + 2});
+            ar.push({x: x.x + 1, y: x.y});
+            ar.push({x: x.x + 2, y: x.y});
+            ar.push({x: x.x - 1, y: x.y});
+            ar.push({x: x.x - 2, y: x.y});
+            ar.push({x: x.x, y: x.y - 1});
+            ar.push({x: x.x, y: x.y - 2});
+            ar.push({x: x.x, y: x.y + 1});
+            ar.push({x: x.x, y: x.y + 2});
         }
 
         return ar;
@@ -181,7 +181,7 @@ const processBoard = function (boardString) {
 };
 
 // you can get this code after registration on the server with your email
-let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/i7zskjkz5a93j272s0au?code=4803967771983834522";
+let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/nf1l87w5jn2bfcwutma9?code=5737874400672214960";
 
 url = url.replace("http", "ws");
 url = url.replace("board/player/", "ws?user=");
@@ -734,8 +734,8 @@ var Board = function (board) {
 function getTanksTrajectories(danger, board) {
     let {tank, path} = findClosestTank(board);
     //tank почему-то наш танк
-    console.log("KEK",danger[tank.x][tank.y]);
-    console.log("DIR",checkTankDirection(dangerMap,tank))
+    console.log(tank.toString() + " tank");
+    console.log(board.getMe() + " me")
     let tempDanger = danger.map(row => [...row]);
     for (let x = tank.x + 1; x < 43; x++) {
         if (danger[x][tank.y] !== Elements.BATTLE_WALL) {
@@ -775,7 +775,19 @@ function getTanksTrajectories(danger, board) {
     // })
     // if (path.length < 2 && currentStep - lastShot <= 3)
     //     return "STOP"
-    if (currentStep - lastShot <= path[0].length - 1 || canShot())
+
+    if(path.length <= 3 && stepsToShoot > 2) {
+        console.log('#######\n#######\n#######');
+        var _c = findDirection(board.getMe(), nextPoint);
+        _c = _c === 'LEFT' ? 'RIGHT' :
+            _c === 'RIGHT' ? 'LEFT' :
+            _c === 'UP' ? 'DOWN':
+            'UP';
+        return _c;
+    }
+
+
+    if (4 - stepsToShoot <= path[0].length - 1 || stepsToShoot == 0)
         return findDirection(board.getMe(), nextPoint) + str;
 
     return findDirection(board.getMe(), nextPoint);
@@ -793,9 +805,9 @@ const fireToDangerDirect = (tank) => {
     return bulletsOnMap && bulletsOnMap.length && bulletsOnMap[0].direction + ",ACT";
 }
 
-function canShot() {
-    return currentStep - lastShot >= 4;
-}
+// function canShot() {
+//     return currentStep - lastShot >= 4;
+// }
 
 // function neededEscape(tank,board){
 //     if(this.fastestPath(tank,board).length<=1 && !canShot()){
@@ -843,7 +855,6 @@ function bulletCreator() {
 }
 
 function checkTankDirection(danger, tank) {
-
     if (danger[tank.x][tank.y] == '˄') return 'up';
     else if (danger[tank.x][tank.y] == '˅') return 'down';
     else if (danger[tank.x][tank.y] == '˂') return 'left';
@@ -851,7 +862,7 @@ function checkTankDirection(danger, tank) {
 
 }
     let currentStep = 0;
-    let lastShot = 0;
+    let stepsToShoot = 0; //let lastShot = 0;
     let readyToFire = true;
     let bulletsOnMap = [];
     let dangerMap = [];
@@ -861,9 +872,11 @@ function checkTankDirection(danger, tank) {
         return {
             get: function () {
                 currentStep++;
-
-               /* console.log("current step", currentStep)
-                console.log("last shot", lastShot)*/
+                stepsToShoot--;
+                if(stepsToShoot < 0) {
+                    stepsToShoot = 0;
+                }
+               
                 const tank = board.getMe();
                 if (!tank)
                     return "STOP"
@@ -871,7 +884,7 @@ function checkTankDirection(danger, tank) {
                 dangerMap = dangerCells(bulletsOnMap, board);
 
                 let res1 = getTanksTrajectories(dangerMap, board)
-                if (res1.indexOf('ACT') + 1) lastShot = currentStep;
+                if (res1.indexOf('ACT') + 1) stepsToShoot = 4;
                 return res1;
 
                 let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
@@ -880,7 +893,7 @@ function checkTankDirection(danger, tank) {
                     return freeSpaceToMove[0] + ",ACT";
                 } else {
                     let res = fireToDangerDirect(tank);
-                    if (res.indexOf('ACT') + 1) lastShot = currentStep;
+                    if (res.indexOf('ACT') + 1) stepsToShoot = 4;
                     return res;
                 }
 
