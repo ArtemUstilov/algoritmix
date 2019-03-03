@@ -77,7 +77,12 @@ function findClosestTank(board) {
         return map;
     }
 
-    return board.getEnemies().map(x => ({
+    return board.getEnemies().filter(x=>{
+        return board.getAt(x.x,x.y) == Elements.OTHER_TANK_UP ||
+            board.getAt(x.x,x.y) == Elements.OTHER_TANK_DOWN ||
+            board.getAt(x.x,x.y) == Elements.OTHER_TANK_RIGHT ||
+            board.getAt(x.x,x.y) == Elements.OTHER_TANK_LEFT;
+    }).map(x => ({
         tank: x,
         path: x.fastestPath(board.getMe(),
             convertDengerBoardToMap(dangerMap, x))
@@ -181,7 +186,7 @@ const processBoard = function (boardString) {
 };
 
 // you can get this code after registration on the server with your email
-let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/nf1l87w5jn2bfcwutma9?code=5737874400672214960";
+let url = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/dovj551h209o65ecedff?code=608565800918692698";
 
 url = url.replace("http", "ws");
 url = url.replace("board/player/", "ws?user=");
@@ -451,7 +456,7 @@ class Point {
     }
 };
 
-const getSaveCells = function (x, y, dangerMap) {
+const getSaveCells = function (x, y, dangerMap, board) {
     const result = [];
     for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
@@ -708,7 +713,14 @@ var Board = function (board) {
             })
             .length;
     };
-
+    const getBots = function () {
+        let result = [];
+        //result = result.concat(findAll(Elements.AI_TANK_UP));
+        //result = result.concat(findAll(Elements.AI_TANK_DOWN));
+        result = result.concat(findAll(Elements.AI_TANK_LEFT));
+        result = result.concat(findAll(Elements.AI_TANK_RIGHT));
+        return result;
+    }
     return {
         size: boardSize,
         getMe: getMe,
@@ -726,11 +738,47 @@ var Board = function (board) {
         isBarrierAt: isBarrierAt,
         getBarriers: getBarriers,
         getAt: getAt,
+        getBots: getBots
     };
+
 };
 
 //__--DEFAULT CODE END--__
+function shouldShootBot(realBoard, board) {
+    let tank = realBoard.getMe();
+    let ourLines = [];
+    for (let x = tank.x + 1; x < 43; x++) {
+        if (board[x][tank.y] !== Elements.BATTLE_WALL) {
+            ourLines.push(new Point(x, tank.y));
+        } else break;
+    }
+    for (let x = tank.x - 1; x >= 0; x--) {
+        if (board[x][tank.y] !== Elements.BATTLE_WALL) {
+            ourLines.push(new Point(x, tank.y));
+        } else break;
+    }
+    return realBoard.getBots().filter(bot => ourLines.filter(cell => bot.equal(cell)).length).filter(bot => bot.fastestPath(tank).length < 7)
+        .sort((first, second) => {
+            return first.length - second.length;
+        })[0];
 
+}
+
+function canAttackBot(board, danger) {
+    if (shouldShootBot(board, danger)) {
+        const botTank = shouldShootBot(board, danger)
+        let {x, y} = board.getMe();
+        if (y == botTank.y) {
+            if (x < botTank.x) {
+                return "RIGHT, ACT";
+            } else {
+                return "LEFT, ACT";
+            }
+        }
+    }
+    return undefined;
+
+}
 function getTanksTrajectories(danger, board) {
     let {tank, path} = findClosestTank(board);
     //tank почему-то наш танк
@@ -768,54 +816,94 @@ function getTanksTrajectories(danger, board) {
         str = ",ACT";
     }
     let nextPoint;
+
+    function fff(me, coord, str) {
+        if(coord.x == me.x && coord.y == me.y - 1) {
+            return str.filter(s => s.indexOf('UP') + 1)[0];
+        } else if (coord.x == me.x && coord.y == me.y + 1) {
+            return str.filter(s => s.indexOf('DOWN') + 1)[0];
+        } else if (coord.x == me.x + 1 && coord.y == me.y) {
+            return str.filter(s => s.indexOf('RIGHT') + 1)[0];
+        } else if (coord.x == me.x - 1 && coord.y == me.y) {
+            return str.filter(s => s.indexOf('LEFT') + 1)[0];
+        }
+    }
+    if(stepsToShoot > 0){
+        let x = board.getMe().x, y = board.getMe().y;
+        let enem = board.getEnemies();
+
+        if(enem.find(X=>{
+            return (X.x == x+1 && X.y == y) || (X.x == x-1 && X.y == y) || (X.x == x && X.y == y-1) || (X.x == x && X.y == y+1);
+        })){
+            let e = enem.find(X=>{
+                return (X.x == x+1 && X.y == y) || (X.x == x-1 && X.y == y) || (X.x == x && X.y == y-1) || (X.x == x && X.y == y+1);
+            });
+            let r = fff(board.getMe(), e, getSaveCells(x,y, dangerMap,board));
+            if(r) return r;
+            console.log('RUUUUUUUUUUUUUUUUUUn')
+            return getSaveCells(x,y, dangerMap,board).find(x=>x != 'STOP') ?
+                getSaveCells(x,y, dangerMap,board).find(x=>x != 'STOP') : 'STOP';
+        }
+
+    }
+    let rrr = checkDirectionTanks(board);
+    if(rrr && stepsToShoot === 0 && reloadSkill < 1) {
+        console.log('SUPER SKILLLLLLLLLLLllllllllllllllllllllllllllllllllllllllllllllllllllllllllll' + rrr)
+        reloadSkill = 7;
+        return rrr;
+    }
+
     if(!path || !path.length)
-      return "STOP";
-    if(path.length < 3 && stepsToShoot > 0){
-      let wrongDirect = findDirection(board.getMe(), path[0]);
-      let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap).filter(x=>!x.equal(wrongDirect));
-      if(!freeSpaceToMove.length){
         return "STOP";
-      }
-      let inverse = "";
-      switch (wrongDirect){
-        case "RIGHT":
-          inverse = "LEFT";
-          break;
-        case "LEFT":
-          inverse = "RIGHT";
-          break;
-        case "UP":
-          inverse = "DOWN";
-          break;
-        case "DOWN":
-          inverse = "UP";
-          break;
-      }
-      if(freeSpaceToMove.includes(inverse))
-        return inverse;
-      return freeSpaceToMove.sort((a,b)=>Math.random() > 0.5 ? a : b)[0];
+    if(path.length < 3 && stepsToShoot > 0){
+        let wrongDirect = findDirection(board.getMe(), path[0]);
+        try{
+            let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap, board).filter(x=>!x.equal(wrongDirect));
+            if(!freeSpaceToMove.length){
+                return "STOP";
+            } }catch(e){
+            return "STOP";
+        }
+        let inverse = "";
+        switch (wrongDirect){
+            case "RIGHT":
+                inverse = "LEFT";
+                break;
+            case "LEFT":
+                inverse = "RIGHT";
+                break;
+            case "UP":
+                inverse = "DOWN";
+                break;
+            case "DOWN":
+                inverse = "UP";
+                break;
+        }
+        if(freeSpaceToMove.includes(inverse))
+            return inverse;
+        return freeSpaceToMove.filter(x=>!x.equal("STOP")).sort((a,b)=>Math.random() > 0.5 ? a : b)[0];
     }
     nextPoint = path[0];
 
     let direction = findDirection(board.getMe(), nextPoint);
     let x = board.getMe().x, y = board.getMe().y;
     switch(direction){
-      case 'UP':
-        if(tank.y <= y || tank.x != x)
-          str = "";
-        break;
-      case 'DOWN':
-        if(tank.y >= y || tank.x != x)
-          str = "";
-        break;
-      case 'RIGHT':
-        if(tank.y != y || tank.x <= x)
-          str = "";
-        break;
-      case 'LEFT':
-        if(tank.y < y || tank.x >= x)
-          str = "";
-        break;
+        case 'UP':
+            if(tank.y <= y || tank.x != x)
+                str = "";
+            break;
+        case 'DOWN':
+            if(tank.y >= y || tank.x != x)
+                str = "";
+            break;
+        case 'RIGHT':
+            if(tank.y != y || tank.x <= x)
+                str = "";
+            break;
+        case 'LEFT':
+            if(tank.y < y || tank.x >= x)
+                str = "";
+            break;
     }
     return direction + str;
 }
@@ -887,55 +975,193 @@ function checkTankDirection(danger, tank) {
     else if (danger[tank.x][tank.y] == '˂') return 'left';
     else if (danger[tank.x][tank.y] == '˃') return 'down';
 }
-function checkDirectionTanks(arr, board){
-  arr.forEach(x=>{
-    let tankDirect = board.getAt(x);
-    switch(tankDirect){
-      case Elements.OTHER_TANK_DOWN:
-      case Elements.AI_TANK_DOWN:
+function checkDirectionTanks(board){
+    let x = board.getMe().x, y = board.getMe().y;
+    let left = [], right = [], up = [], down = [];
+    up = up.concat(board.findAll(Elements.AI_TANK_UP));
+    down = down.concat(board.findAll(Elements.AI_TANK_DOWN));
+    left = left.concat(board.findAll(Elements.AI_TANK_LEFT));
+    right = right.concat(board.findAll(Elements.AI_TANK_RIGHT));
+    up = up.concat(board.findAll(Elements.OTHER_TANK_UP));
+    down = down.concat(board.findAll(Elements.OTHER_TANK_DOWN));
+    left = left.concat(board.findAll(Elements.OTHER_TANK_LEFT));
+    right = right.concat(board.findAll(Elements.OTHER_TANK_RIGHT));
 
+    let tanksRight = [pt(x-1, y+2), pt(x-1, y+1),pt(x-1, y-2), pt(x-1, y-1)];
+    let tanksLeft = [pt(x+1, y+2), pt(x+1, y+1),pt(x+1, y-2), pt(x+1, y-1)];
+    let tanksUp = [pt(x-2, y-1), pt(x-1, y-1),pt(x+1, y-1), pt(x+2, y-1)];
+    let tanksDown = [pt(x-2, y+1), pt(x-1, y+1),pt(x+1, y+1), pt(x+2, y+1)];
+
+    tanksRight = tanksRight.filter(t => right.find(r => r.equal(t)));
+    tanksLeft = tanksLeft.filter(t => left.find(r => r.equal(t)));
+    tanksUp = tanksUp.filter(t => up.find(r => r.equal(t)));
+    tanksDown = tanksDown.filter(t => down.find(r => r.equal(t)));
+    let dirc = "";
+    let tank;
+    if(tanksRight.length){
+        tank = tanksRight[0];
+        if(tank.y > y)
+            dirc = "UP";
+        else
+            dirc = "DOWN";
+    }else if(tanksLeft.length){
+        tank = tanksLeft[0];
+        if(tank.y > y)
+            dirc = "UP";
+        else
+            dirc = "DOWN";
+    }else if(tanksDown.length){
+        tank = tanksDown[0];
+        if(tank.x > x)
+            dirc = "RIGHT";
+        else
+            dirc = "LEFT";
+    }else if(tanksUp.length){
+        tank = tanksUp[0];
+        if(tank.x > x)
+            dirc = "RIGHT";
+        else
+            dirc = "LEFT";
+    }
+    if(!tank)
+        return;
+    if(Math.abs(tank.x - x) + Math.abs(tank.y-y) === 2){
+        if(dirc.length > 1)
+            return dirc + ",ACT";
+        return undefined;
+    }else{
+        let elem = board.getAt(tank.x,tank.y);
+        switch (dirc) {
+            case 'UP':
+                if(board.getAt(x,y) == Elements.TANK_UP)
+                    return "ACT";
+                return;
+            case 'DOWN':
+                if(board.getAt(x,y) == Elements.TANK_DOWN)
+                    return "ACT";
+                return;
+            case 'LEFT':
+                if(board.getAt(x,y) == Elements.TANK_LEFT)
+                    return "ACT";
+                return;
+            case 'RIGHT':
+                if(board.getAt(x,y) == Elements.TANK_RIGHT)
+                    return "ACT";
+                return;
+            default:
+                return;
+        }
     }
 
-  })
 }
-    let stepsToShoot = 0;
-    let bulletsOnMap = [];
-    let dangerMap = [];
-    const fire = ()=> stepsToShoot = 4;
-    const reload = () => stepsToShoot -= stepsToShoot ? 1 : 0;
-    const fastReload = ()=>stepsToShoot = 0;
-    const BulletFactory = bulletCreator();
-    const DirectionSolver = function (board) {
-        return {
-            get: function () {
-              try {
+function checkDirectionTanks(board){
+    let x = board.getMe().x, y = board.getMe().y;
+    let left = [], right = [], up = [], down = [];
+    up = up.concat(board.findAll(Elements.AI_TANK_UP));
+    down = down.concat(board.findAll(Elements.AI_TANK_DOWN));
+    left = left.concat(board.findAll(Elements.AI_TANK_LEFT));
+    right = right.concat(board.findAll(Elements.AI_TANK_RIGHT));
+    up = up.concat(board.findAll(Elements.OTHER_TANK_UP));
+    down = down.concat(board.findAll(Elements.OTHER_TANK_DOWN));
+    left = left.concat(board.findAll(Elements.OTHER_TANK_LEFT));
+    right = right.concat(board.findAll(Elements.OTHER_TANK_RIGHT));
+
+    let tanksRight = [pt(x-1, y+1), pt(x-1, y-1)];
+    let tanksLeft = [pt(x+1, y+1), pt(x+1, y-1)];
+    let tanksUp = [pt(x-1, y-1),pt(x+1, y-1)];
+    let tanksDown = [pt(x-1, y+1),pt(x+1, y+1)];
+
+    tanksRight = tanksRight.filter(t => right.find(r => r.equal(t)));
+    tanksLeft = tanksLeft.filter(t => left.find(r => r.equal(t)));
+    tanksUp = tanksUp.filter(t => up.find(r => r.equal(t)));
+    tanksDown = tanksDown.filter(t => down.find(r => r.equal(t)));
+    let dirc = "";
+    let tank;
+    if(tanksRight.length){
+        tank = tanksRight[0];
+        if(tank.y > y)
+            dirc = "UP";
+        else
+            dirc = "DOWN";
+    }else if(tanksLeft.length){
+        tank = tanksLeft[0];
+        if(tank.y > y)
+            dirc = "UP";
+        else
+            dirc = "DOWN";
+    }else if(tanksDown.length){
+        tank = tanksDown[0];
+        if(tank.x > x)
+            dirc = "RIGHT";
+        else
+            dirc = "LEFT";
+    }else if(tanksUp.length){
+        tank = tanksUp[0];
+        if(tank.x > x)
+            dirc = "RIGHT";
+        else
+            dirc = "LEFT";
+    }
+    if(!tank)
+        return;
+    switch (dirc) {
+        case 'UP':
+            if(board.getAt(x,y) == Elements.TANK_UP)
+                return "ACT";
+            return;
+        case 'DOWN':
+            if(board.getAt(x,y) == Elements.TANK_DOWN)
+                return "ACT";
+            return;
+        case 'LEFT':
+            if(board.getAt(x,y) == Elements.TANK_LEFT)
+                return "ACT";
+            return;
+        case 'RIGHT':
+            if(board.getAt(x,y) == Elements.TANK_RIGHT)
+                return "ACT";
+            return;
+        default:
+            return;
+    }
+
+}
+let stepsToShoot = 0;
+let bulletsOnMap = [];
+let dangerMap = [];
+let reloadSkill = 0;
+const fire = ()=> stepsToShoot = 4;
+const reload = () => stepsToShoot -= stepsToShoot ? 1 : 0;
+const fastReload = ()=>stepsToShoot = 0;
+const BulletFactory = bulletCreator();
+const DirectionSolver = function (board) {
+    return {
+        get: function () {
+            try {
                 reload();
+                reloadSkill -= reloadSkill ? 1 : 0;
                 const tank = board.getMe();
                 if (!tank) {
-                  fastReload();
-                  return "STOP"
+                    fastReload();
+                    return "STOP"
                 }
 
                 bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
                 dangerMap = dangerCells(bulletsOnMap, board);
 
-                let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
-                if (!freeSpaceToMove.length) {
-                  fire();
-                  return fireToDangerDirect(tank);;
-                }
+
 
                 let res1 = getTanksTrajectories(dangerMap, board)
                 if (res1.includes('ACT')) fire();
                 return res1;
 
-              }catch(e){
+            }catch(e){
                 console.log(e);
                 return "STOP";
-              }
             }
-        };
+        }
     };
+};
 
 //END
 
