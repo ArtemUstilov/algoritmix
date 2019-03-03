@@ -763,34 +763,61 @@ function getTanksTrajectories(danger, board) {
             return ar;
         }, []).filter(o => typeof o.value == "number" && o.value > 0);
     let str = "";
-    if (temp.find(x => x.coords.equal(board.getMe()))) {
+
+    if (temp.find(x => x.coords.equal(board.getMe())) && stepsToShoot === 0) {
         str = ",ACT";
     }
     let nextPoint;
-    nextPoint = path[0];
-    console.log("path", path[0])
-    // temp.forEach(i=>{
-    //     if(i.coords.x == path[0].x+1 && currentStep - lastShot >= 3)nextPoint.x++;
-    //     else  if(i.coords.x == path[0].x-1 && currentStep - lastShot >= 3)nextPoint.x--;
-    // })
-    // if (path.length < 2 && currentStep - lastShot <= 3)
-    //     return "STOP"
-
-    if(path.length <= 3 && stepsToShoot > 2) {
-        console.log('#######\n#######\n#######');
-        var _c = findDirection(board.getMe(), nextPoint);
-        _c = _c === 'LEFT' ? 'RIGHT' :
-            _c === 'RIGHT' ? 'LEFT' :
-            _c === 'UP' ? 'DOWN':
-            'UP';
-        return _c;
+    if(!path || !path.length)
+      return "STOP";
+    if(path.length < 3 && stepsToShoot > 0){
+      let wrongDirect = findDirection(board.getMe(), path[0]);
+      let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap).filter(x=>!x.equal(wrongDirect));
+      if(!freeSpaceToMove.length){
+        return "STOP";
+      }
+      let inverse = "";
+      switch (wrongDirect){
+        case "RIGHT":
+          inverse = "LEFT";
+          break;
+        case "LEFT":
+          inverse = "RIGHT";
+          break;
+        case "UP":
+          inverse = "DOWN";
+          break;
+        case "DOWN":
+          inverse = "UP";
+          break;
+      }
+      if(freeSpaceToMove.includes(inverse))
+        return inverse;
+      return freeSpaceToMove.sort((a,b)=>Math.random() > 0.5 ? a : b)[0];
     }
+    nextPoint = path[0];
 
-
-    if (4 - stepsToShoot <= path[0].length - 1 || stepsToShoot == 0)
-        return findDirection(board.getMe(), nextPoint) + str;
-
-    return findDirection(board.getMe(), nextPoint);
+    let direction = findDirection(board.getMe(), nextPoint);
+    let x = board.getMe().x, y = board.getMe().y;
+    switch(direction){
+      case 'UP':
+        if(tank.y <= y || tank.x != x)
+          str = "";
+        break;
+      case 'DOWN':
+        if(tank.y >= y || tank.x != x)
+          str = "";
+        break;
+      case 'RIGHT':
+        if(tank.y != y || tank.x <= x)
+          str = "";
+        break;
+      case 'LEFT':
+        if(tank.y < y || tank.x >= x)
+          str = "";
+        break;
+    }
+    return direction + str;
 }
 
 const has = (array, point) => {
@@ -859,45 +886,53 @@ function checkTankDirection(danger, tank) {
     else if (danger[tank.x][tank.y] == '˅') return 'down';
     else if (danger[tank.x][tank.y] == '˂') return 'left';
     else if (danger[tank.x][tank.y] == '˃') return 'down';
-
 }
-    let currentStep = 0;
-    let stepsToShoot = 0; //let lastShot = 0;
-    let readyToFire = true;
+function checkDirectionTanks(arr, board){
+  arr.forEach(x=>{
+    let tankDirect = board.getAt(x);
+    switch(tankDirect){
+      case Elements.OTHER_TANK_DOWN:
+      case Elements.AI_TANK_DOWN:
+
+    }
+
+  })
+}
+    let stepsToShoot = 0;
     let bulletsOnMap = [];
     let dangerMap = [];
-
+    const fire = ()=> stepsToShoot = 4;
+    const reload = () => stepsToShoot -= stepsToShoot ? 1 : 0;
+    const fastReload = ()=>stepsToShoot = 0;
     const BulletFactory = bulletCreator();
     const DirectionSolver = function (board) {
         return {
             get: function () {
-                currentStep++;
-                stepsToShoot--;
-                if(stepsToShoot < 0) {
-                    stepsToShoot = 0;
-                }
-               
+              try {
+                reload();
                 const tank = board.getMe();
-                if (!tank)
-                    return "STOP"
+                if (!tank) {
+                  fastReload();
+                  return "STOP"
+                }
+
                 bulletsOnMap = bulletDirections(board.getBullets(), bulletsOnMap, board);
                 dangerMap = dangerCells(bulletsOnMap, board);
 
-                let res1 = getTanksTrajectories(dangerMap, board)
-                if (res1.indexOf('ACT') + 1) stepsToShoot = 4;
-                return res1;
-
                 let freeSpaceToMove = getSaveCells(tank.x, tank.y, dangerMap);
-                if (freeSpaceToMove.length) {
-
-                    return freeSpaceToMove[0] + ",ACT";
-                } else {
-                    let res = fireToDangerDirect(tank);
-                    if (res.indexOf('ACT') + 1) stepsToShoot = 4;
-                    return res;
+                if (!freeSpaceToMove.length) {
+                  fire();
+                  return fireToDangerDirect(tank);;
                 }
 
+                let res1 = getTanksTrajectories(dangerMap, board)
+                if (res1.includes('ACT')) fire();
+                return res1;
 
+              }catch(e){
+                console.log(e);
+                return "STOP";
+              }
             }
         };
     };
